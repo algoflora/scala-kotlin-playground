@@ -1,0 +1,7 @@
+**/build
+.idea
+.gradle
+scala/compose
+scala/libs
+scala/kotlin
+scala/tmp
