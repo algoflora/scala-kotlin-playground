@@ -2,14 +2,13 @@
 //package me.steakoverflow.playground.kotlin
 
 import androidx.compose.desktop.ui.tooling.preview.Preview
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.border
+import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.Icon
-import androidx.compose.material.icons.filled.AccountBox
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -19,29 +18,26 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.res.loadSvgPainter
-import androidx.compose.ui.res.loadXmlImageVector
-import androidx.compose.ui.res.useResource
-import androidx.compose.ui.text.font.Font
-import androidx.compose.ui.unit.Density
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 
 import org.joda.time.*
+import org.joda.time.format.DateTimeFormat
+import java.math.BigDecimal
+import java.math.RoundingMode
 
 import me.steakoverflow.playground.scala.Main.google
 import me.steakoverflow.playground.scala.Main.WeatherItem
 import me.steakoverflow.playground.scala.Main.WeatherModel
 import me.steakoverflow.playground.scala.Main.ErrorData
-import org.joda.time.format.DateTimeFormat
-import org.xml.sax.InputSource
-import java.io.File
-import java.math.BigDecimal
-import java.math.RoundingMode
-import java.time.format.DateTimeFormatter
 
 @Composable
 @Preview
@@ -87,41 +83,59 @@ fun App() {
                     Modifier.border(5.dp, Color.Red).padding(10.dp)
                 )
 
-            data.forEach {
-                TableRow(it)
+            Column(modifier = Modifier.verticalScroll(ScrollState(0), enabled = true)) {
+                data.forEach {
+                    TableRow(it)
+                }
             }
-
         }
     }
 }
 
 @Composable
 @Preview
-fun Block(text: String, icon: ImageVector? = null) =
+fun Block(text: String,
+          icon: ImageVector? = null,
+          painter: Painter? = null,
+          fontSize: TextUnit = TextUnit.Unspecified,
+          description: String? = null) =
     Row(
         horizontalArrangement = Arrangement.spacedBy(5.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        if (icon != null) Icon(icon, null)
-        Text(text, fontSize = 10.sp)
+        if (icon != null) Icon(icon, description)
+        else if (painter != null) Icon(painter, description)
+        Text(text, fontSize = fontSize, fontFamily = FontFamily.Monospace)
     }
 
-//fun xmlToImageVector(name: String): ImageVector {
-//    val img = useResource<ImageVector>("$name.xml") { loadXmlImageVector(InputSource(it), Density(1F)) }
-//    println(img)
-//    return img
-//}
+@Composable
+@Preview
+fun SmallBlock(text: String,
+               icon: ImageVector? = null,
+               painter: Painter? = null,
+               fontSize: TextUnit = TextUnit.Unspecified,
+               description: String? = null) = Block(text, icon, painter, 10.sp, description)
 
 @Composable
 @Preview
 fun TableRow(wi: WeatherItem) =
     Row(Modifier.border(1.dp, Color.LightGray).padding(5.dp), Arrangement.spacedBy(20.dp), Alignment.CenterVertically) {
         Block(DateTimeFormat.shortDate().print(Instant.ofEpochSecond(wi.dt())))
-        Block("Humidity: ${wi.humidity()}%", Icons.Outlined.CheckCircle)
-        Block("Pressure: ${wi.pressure()} mbar",Icons.Outlined.CheckCircle)
-        Block("Avg Temp.: ${(wi.temp().average() - BigDecimal(273.15)).setScale(2, RoundingMode.FLOOR)}°C", Icons.Outlined.CheckCircle)
-        Block("Wind Speed.: ${wi.wind_speed()} m/s", Icons.Outlined.CheckCircle)
+        SmallBlock("${wi.humidity().setScale(2)}%", painter = painterResource("humidity.svg"))
+        SmallBlock("${wi.pressure().setScale(2)} mbar", painter = painterResource("pressure.svg"))
+        SmallBlock("${temperatures(wi)} ºC", painter = painterResource("temperature.svg"))
+        SmallBlock("${wi.wind_speed().setScale(2)} m/s", painter = painterResource("wind.svg"))
     }
+
+fun temperatures(wi: WeatherItem): String {
+    val min = "${(wi.temp().average_min() - BigDecimal(273.15)).setScale(2, RoundingMode.HALF_EVEN)}"
+    val max = "${(wi.temp().average_max() - BigDecimal(273.15)).setScale(2, RoundingMode.HALF_EVEN)}"
+    var full = "$min / $max"
+
+    full += " ".repeat(15 - full.length)
+
+    return full
+}
 
 fun main() = application {
     Window(onCloseRequest = ::exitApplication, title = "Weather App") {
